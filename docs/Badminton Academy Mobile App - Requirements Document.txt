@@ -1,0 +1,428 @@
+﻿Badminton Academy Mobile App - Requirements Document
+1. Project Overview
+Project Name: Badminton Academy Management System (POC)
+Platform: Progressive Web App (PWA)
+Technology Stack: Next.js with Service Worker support
+Target: Mobile-first responsive design
+1.1 Purpose
+Create a proof-of-concept mobile application for managing badminton academy operations, focusing on student management, performance tracking, and attendance monitoring.
+1.2 Target Users
+* Academy administrators
+* Coaches
+* Students/Parents (view-only access)
+________________
+
+
+2. Technical Requirements
+2.1 Framework & Architecture
+* Framework: Next.js 14+ (App Router)
+* Language: TypeScript
+* Styling: Tailwind CSS for responsive mobile-first design
+* PWA Support: Service Worker implementation for offline capability
+* State Management: React Context API or Zustand (lightweight)
+2.2 Progressive Web App Features
+* Service Worker for offline functionality
+* App manifest for "Add to Home Screen"
+* Caching strategy for offline data access
+* Background sync for data submission when connection restored
+* Push notifications support (future enhancement)
+2.3 Data Storage
+* Local Storage: IndexedDB for offline data persistence
+* Backend (POC): JSON files or local API routes
+* Future: Ready for integration with Firebase/Supabase/REST API
+2.4 Responsive Design
+* Mobile-first approach (320px minimum width)
+* Breakpoints: Mobile (< 768px), Tablet (768px - 1024px), Desktop (> 1024px)
+* Touch-friendly UI elements (minimum 44x44px tap targets)
+* Optimized for portrait orientation on mobile devices
+________________
+
+
+3. Functional Requirements
+3.1 Core Modules
+Module 1: Student Management
+Purpose: Maintain student database and profiles
+Features:
+* Add new student with comprehensive details
+* Edit existing student information
+* View student profile
+* Search and filter students
+* Delete student records (with confirmation)
+Student Data Fields:
+* Personal Information:
+   * Full Name (required)
+   * Date of Birth (required)
+   * Gender (required)
+   * Photo/Avatar (optional)
+   * Contact Number (required)
+   * Email Address (optional)
+   * Emergency Contact (required)
+* Academy Information:
+   * Student ID (auto-generated)
+   * Enrollment Date (required)
+   * Batch/Group (dropdown)
+   * Skill Level (Beginner/Intermediate/Advanced)
+   * Coach Assigned (dropdown)
+   * Membership Status (Active/Inactive)
+* Additional Information:
+   * Address
+   * Medical Conditions/Notes
+   * Parent/Guardian Name
+   * Parent Contact Details
+Module 2: Performance Report
+Purpose: Track and analyze student performance metrics
+Features:
+* Record performance assessments
+* View performance history
+* Generate performance charts
+* Compare performance over time
+* Export performance reports
+Performance Metrics:
+* Assessment Date
+* Skills Assessment:
+   * Footwork (rating 1-10)
+   * Serve Quality (rating 1-10)
+   * Smash Power (rating 1-10)
+   * Defense Skills (rating 1-10)
+   * Stamina (rating 1-10)
+   * Court Coverage (rating 1-10)
+* Match Performance:
+   * Matches Played
+   * Matches Won
+   * Win Percentage
+* Progress Tracking:
+   * Overall Rating (calculated average)
+   * Improvement Areas (text notes)
+   * Strengths (text notes)
+   * Coach Comments (text area)
+   * Next Assessment Date
+Performance Views:
+* Individual student performance dashboard
+* Graphical representation (radar charts, line graphs)
+* Performance comparison across time periods
+* Batch-wise performance overview
+Module 3: Attendance Report
+Purpose: Track and manage student attendance
+Features:
+* Mark daily attendance
+* View attendance records
+* Generate attendance reports
+* Attendance statistics
+* Export attendance data
+Attendance Data:
+* Date (required)
+* Student Name/ID (required)
+* Status (Present/Absent/Late/On Leave)
+* Session Time (Morning/Evening/Custom)
+* Batch/Group
+* Coach Name
+* Notes (optional - reason for absence)
+Attendance Views:
+* Daily attendance marking interface
+* Monthly attendance calendar view
+* Student-wise attendance history
+* Batch-wise attendance summary
+* Attendance percentage calculation
+* Defaulter list (below threshold)
+Attendance Reports:
+* Date range: Daily, Weekly, Monthly, Custom
+* Filters: By student, by batch, by coach
+* Statistics: Present %, Absent %, Late %
+* Visual indicators (color-coded)
+________________
+
+
+4. Screen Requirements
+4.1 Screen List
+1. Dashboard/Home Screen
+   * Quick statistics (total students, today's attendance, upcoming assessments)
+   * Quick action buttons
+   * Recent activities
+2. Student Management Screens
+   * Student List View (with search and filters)
+   * Add Student Form
+   * Edit Student Form
+   * Student Detail View
+3. Performance Report Screens
+   * Performance Entry Form
+   * Student Performance Dashboard
+   * Performance History List
+   * Performance Charts View
+4. Attendance Screens
+   * Daily Attendance Marking
+   * Attendance Calendar View
+   * Attendance Reports
+   * Student Attendance History
+5. Common Screens
+   * Login Screen (future)
+   * Settings Screen
+   * Offline Status Indicator
+   * Sync Status Screen
+4.2 Navigation Structure
+* Bottom Navigation Bar (Mobile):
+   * Home/Dashboard
+   * Students
+   * Performance
+   * Attendance
+* Hamburger Menu (Additional options):
+   * Settings
+   * Export Data
+   * Sync Status
+   * About
+________________
+
+
+5. UI/UX Requirements
+5.1 Design Principles
+* Clean, minimalist interface
+* High contrast for outdoor visibility
+* Large, thumb-friendly buttons
+* Minimal text input (use dropdowns, toggles where possible)
+* Clear visual feedback for actions
+* Loading states for async operations
+5.2 Color Scheme (Suggested)
+* Primary: Sports/Energy colors (Blue/Green)
+* Secondary: Accent colors for CTAs
+* Status colors:
+   * Green for present/success
+   * Red for absent/error
+   * Yellow for late/warning
+   * Gray for neutral
+5.3 Typography
+* Readable font sizes (minimum 16px for body text)
+* Clear hierarchy with headings
+* High contrast text
+5.4 Forms
+* Single column layout on mobile
+* Inline validation
+* Clear error messages
+* Auto-save functionality (draft mode)
+* Progress indicators for multi-step forms
+________________
+
+
+6. Service Worker Requirements
+6.1 Caching Strategy
+* Cache First: Static assets (CSS, JS, images)
+* Network First, Cache Fallback: API data
+* Cache Only: App shell
+6.2 Offline Functionality
+* View cached student data
+* View cached performance reports
+* View cached attendance records
+* Queue data submissions for sync when online
+* Show offline indicator
+6.3 Background Sync
+* Sync attendance entries when connection restored
+* Sync performance data updates
+* Sync new student additions
+* Show sync status and pending items
+6.4 Update Strategy
+* Notify users of new app version
+* Prompt to reload for updates
+* Clear old caches on update
+________________
+
+
+7. Data Management
+7.1 Local Storage (IndexedDB)
+* Students database
+* Performance records
+* Attendance records
+* Pending sync queue
+* App settings
+7.2 Data Validation
+* Required field validation
+* Format validation (email, phone)
+* Date range validation
+* Duplicate entry prevention
+7.3 Data Synchronization
+* Conflict resolution strategy
+* Last-write-wins for POC
+* Sync status indicators
+* Manual sync trigger option
+________________
+
+
+8. Performance Requirements
+* Initial load time: < 3 seconds on 3G
+* Time to Interactive: < 5 seconds
+* Lighthouse PWA score: > 90
+* Smooth 60fps scrolling and animations
+* Image optimization (WebP format)
+* Lazy loading for images and components
+________________
+
+
+9. Security Requirements (POC Level)
+* Input sanitization
+* Local data encryption (future)
+* Secure data transmission (HTTPS)
+* Session management (when auth added)
+* Data backup mechanism
+________________
+
+
+10. Future Enhancements
+* User authentication and role-based access
+* Cloud database integration
+* Real-time data synchronization
+* Push notifications for reminders
+* Payment/fee management
+* Tournament management
+* Photo/video upload for technique analysis
+* Multi-language support
+* Dark mode
+* Analytics dashboard
+* Batch scheduling
+* Automated report generation
+* Parent portal access
+________________
+
+
+11. Testing Requirements
+11.1 Testing Scope
+* Responsive design testing (multiple devices)
+* Offline functionality testing
+* Form validation testing
+* Data persistence testing
+* Service worker testing
+* Browser compatibility (Chrome, Safari, Firefox)
+11.2 Test Devices
+* iOS Safari (iPhone)
+* Android Chrome
+* Various screen sizes (320px to 768px)
+________________
+
+
+12. Deliverables
+1. Functional PWA with service worker
+2. Student management CRUD operations
+3. Performance tracking system
+4. Attendance management system
+5. Offline capability with sync
+6. Mobile-responsive UI
+7. Basic documentation
+8. Deployment guide
+________________
+
+
+13. Success Criteria
+* App installs as PWA on mobile devices
+* Works offline with data sync
+* All CRUD operations functional
+* Mobile-responsive on all target devices
+* Performance metrics meet requirements
+* Forms are intuitive and easy to use
+* Data persists across sessions
+________________
+
+
+14. Timeline (Suggested for POC)
+Phase 1 (Week 1-2):
+* Project setup with Next.js
+* PWA configuration and service worker
+* Basic UI layout and navigation
+* Student management module
+Phase 2 (Week 3):
+* Performance report module
+* Attendance module
+* Data persistence with IndexedDB
+Phase 3 (Week 4):
+* Offline sync functionality
+* Testing and bug fixes
+* UI/UX refinements
+* Documentation
+________________
+
+
+15. Technical Stack Summary
+Frontend:
+- Next.js 14+ (App Router)
+- React 18+
+- TypeScript
+- Tailwind CSS
+
+
+PWA:
+- Workbox (Service Worker)
+- next-pwa plugin
+
+
+State Management:
+- React Context / Zustand
+
+
+Data Storage:
+- IndexedDB (Dexie.js)
+- Local Storage (settings)
+
+
+Charts/Visualization:
+- Chart.js / Recharts
+
+
+Icons:
+- Lucide React / Heroicons
+
+
+Deployment:
+- Vercel / Netlify
+________________
+
+
+Appendix A: Sample Data Structures
+typescript
+// Student Interface
+interface Student {
+  id: string;
+  fullName: string;
+  dateOfBirth: Date;
+  gender: 'Male' | 'Female' | 'Other';
+  photo?: string;
+  contactNumber: string;
+  email?: string;
+  emergencyContact: string;
+  enrollmentDate: Date;
+  batch: string;
+  skillLevel: 'Beginner' | 'Intermediate' | 'Advanced';
+  coachId: string;
+  membershipStatus: 'Active' | 'Inactive';
+  address?: string;
+  medicalNotes?: string;
+  parentName?: string;
+  parentContact?: string;
+}
+
+
+// Performance Record Interface
+interface PerformanceRecord {
+  id: string;
+  studentId: string;
+  assessmentDate: Date;
+  footwork: number;
+  serveQuality: number;
+  smashPower: number;
+  defenseSkills: number;
+  stamina: number;
+  courtCoverage: number;
+  matchesPlayed: number;
+  matchesWon: number;
+  improvementAreas: string;
+  strengths: string;
+  coachComments: string;
+  nextAssessmentDate?: Date;
+}
+
+
+// Attendance Record Interface
+interface AttendanceRecord {
+  id: string;
+  date: Date;
+  studentId: string;
+  status: 'Present' | 'Absent' | 'Late' | 'On Leave';
+  session: string;
+  batchId: string;
+  coachId: string;
+  notes?: string;
+}
