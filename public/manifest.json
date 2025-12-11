@@ -1,6 +1,6 @@
 {
-  "name": "Badminton Academy Management System",
-  "short_name": "Badminton Academy",
+  "name": "Nexus Academy Management System",
+  "short_name": "Nexus Academy",
   "description": "Manage students, attendance, and performance for your badminton academy.",
   "start_url": "/",
   "display": "standalone",
