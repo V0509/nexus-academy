@@ -37,16 +37,6 @@ export const sanitizeInput = (input: string): string => {
   return sanitized;
 };
 
-// Advanced HTML Sanitization using DOMPurify
-export const sanitizeHTML = (html: string): string => {
-  if (typeof window === 'undefined') return html;
-  
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['b', 'i', 'em', 'strong', 'p', 'br', 'a', 'ul', 'ol', 'li'],
-    ALLOWED_ATTR: ['href', 'target', 'rel'],
-    KEEP_CONTENT: true,
-  });
-};
 
 // SQL Injection Prevention - Parametrized approach
 export const validateEmail = (email: string): boolean => {
