@@ -3,7 +3,6 @@
  * Protects against: XSS, Injection Attacks, CSRF
  */
 
-import DOMPurify from 'isomorphic-dompurify';
 
 // CSRF Token Generation and Validation
 export const generateCSRFToken = (): string => {
