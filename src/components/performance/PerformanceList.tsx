@@ -94,6 +94,11 @@ export default function PerformanceList({ onEdit, onAddNew }: PerformanceListPro
 
         let filtered = [...allRecords];
 
+        // Filter out records for deleted students
+        if (students) {
+            filtered = filtered.filter(r => students.some(s => s.studentId === r.studentId));
+        }
+
         // Filter by student
         if (selectedStudent !== 'All') {
             filtered = filtered.filter(r => r.studentId === selectedStudent);

@@ -25,7 +25,9 @@ export default function Dashboard() {
   const totalStudents = students?.length || 0;
   const activeStudents = students?.filter(s => s.membershipStatus === 'Active').length || 0;
 
-  const presentCount = attendanceToday?.filter(a => a.status === 'Present').length || 0;
+  const presentCount = attendanceToday?.filter(a =>
+    a.status === 'Present' && students?.some(s => s.studentId === a.studentId)
+  ).length || 0;
   const attendanceRate = totalStudents > 0 ? Math.round((presentCount / totalStudents) * 100) : 0;
 
   const assessmentsThisWeek = recentPerformance?.filter(p => {

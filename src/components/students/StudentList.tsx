@@ -60,8 +60,14 @@ export default function StudentList() {
     };
 
     const handleDeleteStudent = async (id: number) => {
-        if (confirm("Are you sure you want to delete this student?")) {
+        if (confirm("Are you sure you want to delete this student? This will also delete all their attendance and performance records.")) {
             try {
+                const studentToDelete = students?.find(s => s.id === id);
+                if (studentToDelete) {
+                    // Delete associated records
+                    await db.attendance.where('studentId').equals(studentToDelete.studentId).delete();
+                    await db.performance.where('studentId').equals(studentToDelete.studentId).delete();
+                }
                 await db.students.delete(id);
             } catch {
                 alert("Failed to delete student. Please try again.");

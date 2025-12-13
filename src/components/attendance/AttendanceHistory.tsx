@@ -53,9 +53,13 @@ export default function AttendanceHistory() {
             if (recordDate < dateRange.startDate || recordDate > dateRange.endDate) return false;
             if (selectedStudent !== 'All' && record.studentId !== selectedStudent) return false;
             if (selectedBatch !== 'All' && record.batchId !== selectedBatch) return false;
+
+            // Filter out records for deleted students
+            if (students && !students.some(s => s.studentId === record.studentId)) return false;
+
             return true;
         });
-    }, [allRecords, dateRange, selectedStudent, selectedBatch]);
+    }, [allRecords, dateRange, selectedStudent, selectedBatch, students]);
 
     const statistics = useMemo(() => {
         const total = filteredRecords.length;

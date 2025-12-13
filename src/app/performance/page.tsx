@@ -40,14 +40,17 @@ export default function PerformancePage() {
     const summaryStats = useMemo(() => {
         if (!allRecords || !students) return null;
 
-        const totalAssessments = allRecords.length;
-        const studentsWithAssessments = new Set(allRecords.map(r => r.studentId)).size;
+        // Filter out records for deleted students
+        const validRecords = allRecords.filter(r => students.some(s => s.studentId === r.studentId));
+
+        const totalAssessments = validRecords.length;
+        const studentsWithAssessments = new Set(validRecords.map(r => r.studentId)).size;
         const totalStudents = students.length;
 
         // Calculate overall average score
         let totalScore = 0;
         let recordCount = 0;
-        allRecords.forEach(record => {
+        validRecords.forEach(record => {
             const technical = (
                 record.footwork + record.serveQuality + record.strokeQuality +
                 record.strokeConsistency + record.smashPower + record.chopsDropShots +
