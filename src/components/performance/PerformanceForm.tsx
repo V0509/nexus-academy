@@ -6,6 +6,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, PerformanceRecord } from "@/lib/db";
 import { X, Save, Target, Zap, Activity, Heart, Brain, Shield, TrendingUp, Droplet, ChevronDown, ChevronUp, User, ArrowLeft, Sparkles, RotateCcw } from "lucide-react";
 import { useToast } from "@/components/common/Toast";
+import { getLocalDateString } from "@/lib/utils";
 
 interface PerformanceFormProps {
     initialData?: PerformanceRecord;
@@ -106,7 +107,7 @@ export default function PerformanceForm({ initialData, onSubmit, onCancel }: Per
         studentId: initialData?.studentId || '',
         assessmentDate: initialData?.assessmentDate
             ? new Date(initialData.assessmentDate).toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0],
+            : getLocalDateString(),
         // Technical Skills
         footwork: initialData?.footwork || 5,
         serveQuality: initialData?.serveQuality || 5,

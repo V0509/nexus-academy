@@ -10,11 +10,15 @@ import {
     Activity,
     Menu,
     X,
-    LogOut
+    LogOut,
+    Cloud,
+    RefreshCw
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { useSync } from "@/hooks/useSync";
+import { useToast } from "@/components/common/Toast";
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -37,6 +41,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const { logout } = useAuth();
+    const { isSyncing, syncData } = useSync();
+    const { showToast } = useToast();
+
+    const handleSync = async () => {
+        const result = await syncData();
+        if (result?.success) {
+            showToast({ title: "Success", message: "Data synced to cloud successfully!", type: 'success' });
+        } else {
+            showToast({ title: "Error", message: "Sync failed. Please try again.", type: 'error' });
+        }
+    };
 
     return (
         <div className="min-h-screen flex flex-col lg:flex-row relative">
@@ -51,6 +66,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     </div>
                 </div>
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className="p-2 hover:bg-blue-100 rounded-xl transition-all duration-200 active:scale-95 group"
+                        aria-label="Sync Data"
+                        title="Sync to Cloud"
+                    >
+                        <RefreshCw size={20} className={`text-slate-600 group-hover:text-blue-600 transition-colors ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
+                    </button>
                     <button
                         onClick={logout}
                         className="p-2 hover:bg-red-100 rounded-xl transition-all duration-200 active:scale-95 group"
@@ -121,6 +145,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </nav>
 
                 <div className="absolute bottom-0 left-0 right-0 p-3 sm:p-4 border-t border-white/10 bg-black/20">
+                    <button
+                        onClick={handleSync}
+                        disabled={isSyncing}
+                        className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 w-full text-white/70 hover:text-white hover:bg-white/10 rounded-xl sm:rounded-2xl transition-all duration-300 group mb-2"
+                    >
+                        <RefreshCw size={20} className={`group-hover:scale-110 transition-transform duration-300 ${isSyncing ? 'animate-spin text-blue-400' : ''}`} />
+                        <span className="font-semibold text-sm sm:text-base">Sync Data</span>
+                    </button>
                     <button
                         onClick={logout}
                         className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 w-full text-white/70 hover:text-red-400 hover:bg-red-500/10 rounded-xl sm:rounded-2xl transition-all duration-300 group"

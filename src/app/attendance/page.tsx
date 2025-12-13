@@ -12,11 +12,11 @@ export default function AttendancePage() {
         <div className="space-y-4 sm:space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4 scale-in">
                 <div>
-                    <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1 flex items-center gap-2">
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white mb-1 flex items-center gap-2 drop-shadow-md">
                         Attendance
-                        <ClipboardCheck className="w-6 h-6 sm:w-7 sm:h-7 text-green-300" />
+                        <ClipboardCheck className="w-6 h-6 sm:w-7 sm:h-7 text-green-400" />
                     </h2>
-                    <p className="text-sm sm:text-base text-white/80 font-medium">
+                    <p className="text-sm sm:text-base text-blue-100 font-medium drop-shadow-sm">
                         {activeTab === 'mark'
                             ? 'Mark daily attendance for students'
                             : 'View attendance history and statistics'}

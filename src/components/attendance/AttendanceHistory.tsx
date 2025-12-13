@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
-import { Calendar, Filter, TrendingUp, Users, ChevronDown, User } from "lucide-react";
+import { Calendar, TrendingUp, Users, ChevronDown, Check, X, Clock, AlertCircle, Search } from "lucide-react";
 
 type DatePreset = 'last7' | 'last30' | 'thisMonth' | 'custom';
 
@@ -14,17 +14,12 @@ export default function AttendanceHistory() {
     const [selectedStudent, setSelectedStudent] = useState('All');
     const [selectedBatch, setSelectedBatch] = useState('All');
 
-    // Fetch all students for filtering
     const students = useLiveQuery(() => db.students.toArray());
-
-    // Fetch all attendance records
     const allRecords = useLiveQuery(() => db.attendance.toArray());
 
-    // Calculate date range based on preset
     const dateRange = useMemo(() => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-
         let startDate = new Date();
         let endDate = new Date(today);
 
@@ -47,62 +42,38 @@ export default function AttendanceHistory() {
                 }
                 break;
         }
-
         return { startDate, endDate };
     }, [datePreset, customStartDate, customEndDate]);
 
-    // Filter records based on criteria
     const filteredRecords = useMemo(() => {
         if (!allRecords) return [];
-
         return allRecords.filter(record => {
             const recordDate = new Date(record.date);
             recordDate.setHours(0, 0, 0, 0);
-
-            // Date range filter
-            if (recordDate < dateRange.startDate || recordDate > dateRange.endDate) {
-                return false;
-            }
-
-            // Student filter
-            if (selectedStudent !== 'All' && record.studentId !== selectedStudent) {
-                return false;
-            }
-
-            // Batch filter
-            if (selectedBatch !== 'All' && record.batchId !== selectedBatch) {
-                return false;
-            }
-
+            if (recordDate < dateRange.startDate || recordDate > dateRange.endDate) return false;
+            if (selectedStudent !== 'All' && record.studentId !== selectedStudent) return false;
+            if (selectedBatch !== 'All' && record.batchId !== selectedBatch) return false;
             return true;
         });
     }, [allRecords, dateRange, selectedStudent, selectedBatch]);
 
-    // Calculate statistics
     const statistics = useMemo(() => {
         const total = filteredRecords.length;
         const present = filteredRecords.filter(r => r.status === 'Present').length;
         const absent = filteredRecords.filter(r => r.status === 'Absent').length;
         const late = filteredRecords.filter(r => r.status === 'Late').length;
         const onLeave = filteredRecords.filter(r => r.status === 'On Leave').length;
-
         return {
-            total,
-            present,
-            absent,
-            late,
-            onLeave,
+            total, present, absent, late, onLeave,
             presentPercent: total > 0 ? Math.round((present / total) * 100) : 0,
         };
     }, [filteredRecords]);
 
-    // Get unique batches
     const batches = useMemo(() =>
         Array.from(new Set(students?.map(s => s.batch) || [])).sort(),
         [students]
     );
 
-    // Sort records by date (newest first)
     const sortedRecords = useMemo(() =>
         [...filteredRecords].sort((a, b) =>
             new Date(b.date).getTime() - new Date(a.date).getTime()
@@ -110,256 +81,197 @@ export default function AttendanceHistory() {
         [filteredRecords]
     );
 
-    // Get student name by ID
     const getStudentName = (studentId: string) => {
         const student = students?.find(s => s.studentId === studentId);
         return student?.fullName || studentId;
     };
 
     const formatDate = (date: Date) => {
-        return new Date(date).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+        return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
-    const getStatusColor = (status: string) => {
+    const getStatusIcon = (status: string) => {
         switch (status) {
-            case 'Present': return 'bg-green-100 text-green-700';
-            case 'Absent': return 'bg-red-100 text-red-700';
-            case 'Late': return 'bg-yellow-100 text-yellow-700';
-            case 'On Leave': return 'bg-blue-100 text-blue-700';
-            default: return 'bg-slate-100 text-slate-700';
+            case 'Present': return <Check size={10} />;
+            case 'Absent': return <X size={10} />;
+            case 'Late': return <Clock size={10} />;
+            case 'On Leave': return <AlertCircle size={10} />;
+            default: return null;
+        }
+    };
+
+    const getStatusStyle = (status: string) => {
+        switch (status) {
+            case 'Present': return 'bg-green-100 text-green-700 border-green-200';
+            case 'Absent': return 'bg-red-100 text-red-700 border-red-200';
+            case 'Late': return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+            case 'On Leave': return 'bg-blue-100 text-blue-700 border-blue-200';
+            default: return 'bg-slate-100 text-slate-500 border-slate-200';
         }
     };
 
     return (
-        <div className="space-y-4 sm:space-y-6">
-            {/* Filters */}
-            <div className="glass rounded-2xl p-4 sm:p-5 space-y-4">
-                <div className="flex items-center gap-2 text-white font-semibold mb-2">
-                    <Filter size={18} className="text-blue-400" />
-                    <span className="text-sm sm:text-base">Filters</span>
-                </div>
-
-                {/* Date Range Selection */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-                    <div>
-                        <label className="block text-xs sm:text-sm font-medium text-blue-100 mb-1.5 sm:mb-2">Date Range</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Calendar size={14} className="text-blue-300/60" />
-                            </div>
-                            <select
-                                value={datePreset}
-                                onChange={(e) => setDatePreset(e.target.value as DatePreset)}
-                                className="w-full pl-8 sm:pl-9 pr-8 sm:pr-9 py-2 sm:py-2.5 bg-white/10 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm appearance-none cursor-pointer text-white"
-                            >
-                                <option value="last7" className="bg-slate-800">Last 7 Days</option>
-                                <option value="last30" className="bg-slate-800">Last 30 Days</option>
-                                <option value="thisMonth" className="bg-slate-800">This Month</option>
-                                <option value="custom" className="bg-slate-800">Custom Range</option>
-                            </select>
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <ChevronDown size={14} className="text-blue-300/60" />
-                            </div>
-                        </div>
+        <div className="space-y-6">
+            {/* Filters Row */}
+            <div className="glass rounded-2xl p-4 flex flex-col sm:flex-row flex-wrap gap-4 items-center justify-between shadow-sm border border-slate-200/60">
+                <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                    <div className="relative group">
+                        <select
+                            value={datePreset}
+                            onChange={(e) => setDatePreset(e.target.value as DatePreset)}
+                            className="w-full sm:w-auto bg-white border border-slate-200 rounded-xl pl-4 pr-10 py-2.5 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer appearance-none transition-all hover:border-blue-300"
+                        >
+                            <option value="last7">Last 7 Days</option>
+                            <option value="last30">Last 30 Days</option>
+                            <option value="thisMonth">This Month</option>
+                            <option value="custom">Custom Range</option>
+                        </select>
+                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-blue-500 transition-colors" />
                     </div>
 
                     {datePreset === 'custom' && (
-                        <>
-                            <div>
-                                <label className="block text-xs sm:text-sm font-medium text-blue-100 mb-1.5 sm:mb-2">Start Date</label>
-                                <input
-                                    type="date"
-                                    value={customStartDate}
-                                    onChange={(e) => setCustomStartDate(e.target.value)}
-                                    className="w-full p-2 sm:p-2.5 bg-white/10 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm text-white"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-xs sm:text-sm font-medium text-blue-100 mb-1.5 sm:mb-2">End Date</label>
-                                <input
-                                    type="date"
-                                    value={customEndDate}
-                                    onChange={(e) => setCustomEndDate(e.target.value)}
-                                    className="w-full p-2 sm:p-2.5 bg-white/10 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm text-white"
-                                />
-                            </div>
-                        </>
+                        <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl p-1">
+                            <input
+                                type="date"
+                                value={customStartDate}
+                                onChange={(e) => setCustomStartDate(e.target.value)}
+                                className="bg-transparent border-none rounded-lg px-2 py-1.5 text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            />
+                            <span className="text-slate-400 text-xs font-medium">TO</span>
+                            <input
+                                type="date"
+                                value={customEndDate}
+                                onChange={(e) => setCustomEndDate(e.target.value)}
+                                className="bg-transparent border-none rounded-lg px-2 py-1.5 text-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                            />
+                        </div>
                     )}
-
-                    <div>
-                        <label className="block text-xs sm:text-sm font-medium text-blue-100 mb-1.5 sm:mb-2">Student</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <User size={14} className="text-blue-300/60" />
-                            </div>
-                            <select
-                                value={selectedStudent}
-                                onChange={(e) => setSelectedStudent(e.target.value)}
-                                className="w-full pl-8 sm:pl-9 pr-8 sm:pr-9 py-2 sm:py-2.5 bg-white/10 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm appearance-none cursor-pointer text-white"
-                            >
-                                <option value="All" className="bg-slate-800">All Students</option>
-                                {students?.map(student => (
-                                    <option key={student.studentId} value={student.studentId} className="bg-slate-800">
-                                        {student.fullName}
-                                    </option>
-                                ))}
-                            </select>
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <ChevronDown size={14} className="text-blue-300/60" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs sm:text-sm font-medium text-blue-100 mb-1.5 sm:mb-2">Batch</label>
-                        <div className="relative">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Users size={14} className="text-blue-300/60" />
-                            </div>
-                            <select
-                                value={selectedBatch}
-                                onChange={(e) => setSelectedBatch(e.target.value)}
-                                className="w-full pl-8 sm:pl-9 pr-8 sm:pr-9 py-2 sm:py-2.5 bg-white/10 border border-white/20 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-xs sm:text-sm appearance-none cursor-pointer text-white"
-                            >
-                                <option value="All" className="bg-slate-800">All Batches</option>
-                                {batches.map(batch => (
-                                    <option key={batch} value={batch} className="bg-slate-800">{batch}</option>
-                                ))}
-                            </select>
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <ChevronDown size={14} className="text-blue-300/60" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Statistics Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                <div className="glass rounded-xl sm:rounded-2xl p-3 sm:p-4">
-                    <div className="flex items-center gap-1.5 sm:gap-2 text-blue-200 text-xs sm:text-sm mb-1.5 sm:mb-2">
-                        <Users size={14} className="sm:w-4 sm:h-4" />
-                        <span className="font-medium">Total</span>
-                    </div>
-                    <p className="text-xl sm:text-2xl font-bold text-white">{statistics.total}</p>
                 </div>
 
-                <div className="glass rounded-xl sm:rounded-2xl p-3 sm:p-4">
-                    <div className="flex items-center gap-1.5 sm:gap-2 text-green-400 text-xs sm:text-sm mb-1.5 sm:mb-2">
-                        <TrendingUp size={14} className="sm:w-4 sm:h-4" />
-                        <span className="font-medium">Present</span>
-                    </div>
-                    <p className="text-xl sm:text-2xl font-bold text-green-400">{statistics.present}</p>
-                    <p className="text-[10px] sm:text-xs text-blue-200/60 mt-0.5 sm:mt-1">{statistics.presentPercent}% Rate</p>
-                </div>
-
-                <div className="glass rounded-xl sm:rounded-2xl p-3 sm:p-4">
-                    <p className="text-xs sm:text-sm font-medium text-red-400 mb-1.5 sm:mb-2">Absent</p>
-                    <p className="text-xl sm:text-2xl font-bold text-red-400">{statistics.absent}</p>
-                </div>
-
-                <div className="glass rounded-xl sm:rounded-2xl p-3 sm:p-4">
-                    <p className="text-xs sm:text-sm font-medium text-yellow-400 mb-1.5 sm:mb-2">Late</p>
-                    <p className="text-xl sm:text-2xl font-bold text-yellow-400">{statistics.late}</p>
-                </div>
-
-                <div className="glass rounded-xl sm:rounded-2xl p-3 sm:p-4 col-span-2 sm:col-span-1">
-                    <p className="text-xs sm:text-sm font-medium text-blue-400 mb-1.5 sm:mb-2">On Leave</p>
-                    <p className="text-xl sm:text-2xl font-bold text-blue-400">{statistics.onLeave}</p>
-                </div>
-            </div>
-
-            {/* Attendance Records - Mobile Cards */}
-            <div className="sm:hidden space-y-3">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <Calendar size={16} className="text-blue-400" />
-                        <h3 className="font-semibold text-white text-sm">Records</h3>
-                    </div>
-                    <span className="text-xs text-blue-200/60">{sortedRecords.length} records</span>
-                </div>
-                {sortedRecords.map((record) => (
-                    <div key={record.id} className="glass rounded-xl p-3">
-                        <div className="flex items-start justify-between mb-2">
-                            <div>
-                                <p className="font-medium text-white text-sm">{getStudentName(record.studentId)}</p>
-                                <p className="text-[10px] text-blue-200/60">{record.studentId}</p>
-                            </div>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${getStatusColor(record.status)}`}>
-                                {record.status}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-[10px] text-blue-200/80">
-                            <span>{formatDate(record.date)}</span>
-                            <span>•</span>
-                            <span>{record.batchId}</span>
-                            <span>•</span>
-                            <span>{record.session}</span>
-                        </div>
-                    </div>
-                ))}
-                {sortedRecords.length === 0 && (
-                    <div className="glass rounded-xl p-6 text-center text-blue-200/60 text-sm">
-                        No records found
-                    </div>
-                )}
-            </div>
-
-            {/* Attendance Records Table - Desktop */}
-            <div className="hidden sm:block glass rounded-2xl overflow-hidden">
-                <div className="p-4 border-b border-white/10 flex items-center gap-2">
-                    <Calendar size={18} className="text-blue-400" />
-                    <h3 className="font-semibold text-white text-sm sm:text-base">Attendance Records</h3>
-                    <span className="ml-auto text-xs sm:text-sm text-blue-200/60">
-                        Showing {sortedRecords.length} records
-                    </span>
-                </div>
-
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-white/5 border-b border-white/10">
-                            <tr>
-                                <th className="p-3 sm:p-4 font-semibold text-blue-200 text-xs sm:text-sm">Date</th>
-                                <th className="p-3 sm:p-4 font-semibold text-blue-200 text-xs sm:text-sm">Student</th>
-                                <th className="p-3 sm:p-4 font-semibold text-blue-200 text-xs sm:text-sm">Batch</th>
-                                <th className="p-3 sm:p-4 font-semibold text-blue-200 text-xs sm:text-sm">Session</th>
-                                <th className="p-3 sm:p-4 font-semibold text-blue-200 text-xs sm:text-sm">Status</th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-white/5">
-                            {sortedRecords.map((record) => (
-                                <tr key={record.id} className="hover:bg-white/5 transition-colors">
-                                    <td className="p-3 sm:p-4 text-xs sm:text-sm text-white">
-                                        {formatDate(record.date)}
-                                    </td>
-                                    <td className="p-3 sm:p-4">
-                                        <div className="font-medium text-white text-xs sm:text-sm">
-                                            {getStudentName(record.studentId)}
-                                        </div>
-                                        <div className="text-[10px] sm:text-xs text-blue-200/60">{record.studentId}</div>
-                                    </td>
-                                    <td className="p-3 sm:p-4 text-xs sm:text-sm text-blue-100">{record.batchId}</td>
-                                    <td className="p-3 sm:p-4 text-xs sm:text-sm text-blue-100">{record.session}</td>
-                                    <td className="p-3 sm:p-4">
-                                        <span className={`inline-block px-2 sm:px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold ${getStatusColor(record.status)}`}>
-                                            {record.status}
-                                        </span>
-                                    </td>
-                                </tr>
+                <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                    <div className="relative group flex-1 sm:flex-none">
+                        <select
+                            value={selectedBatch}
+                            onChange={(e) => setSelectedBatch(e.target.value)}
+                            className="w-full sm:w-40 bg-white border border-slate-200 rounded-xl pl-4 pr-10 py-2.5 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer appearance-none transition-all hover:border-blue-300"
+                        >
+                            <option value="All">All Batches</option>
+                            {batches.map(batch => (
+                                <option key={batch} value={batch}>{batch}</option>
                             ))}
-                            {sortedRecords.length === 0 && (
-                                <tr>
-                                    <td colSpan={5} className="p-6 sm:p-8 text-center text-blue-200/60 text-sm">
-                                        No attendance records found for the selected criteria.
-                                    </td>
-                                </tr>
-                            )}
-                        </tbody>
-                    </table>
+                        </select>
+                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-blue-500 transition-colors" />
+                    </div>
+
+                    <div className="relative group flex-1 sm:flex-none">
+                        <select
+                            value={selectedStudent}
+                            onChange={(e) => setSelectedStudent(e.target.value)}
+                            className="w-full sm:w-48 bg-white border border-slate-200 rounded-xl pl-4 pr-10 py-2.5 text-slate-700 font-medium focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer appearance-none transition-all hover:border-blue-300"
+                        >
+                            <option value="All">All Students</option>
+                            {students?.map(student => (
+                                <option key={student.studentId} value={student.studentId}>
+                                    {student.fullName}
+                                </option>
+                            ))}
+                        </select>
+                        <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none group-hover:text-blue-500 transition-colors" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                <div className="glass p-4 rounded-2xl border border-slate-200/60 flex flex-col items-center justify-center gap-1 shadow-sm hover:shadow-md transition-all">
+                    <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Total</div>
+                    <div className="text-2xl font-black text-slate-700">{statistics.total}</div>
+                    <Users size={16} className="text-slate-400 mt-1" />
+                </div>
+
+                <div className="glass p-4 rounded-2xl border border-green-100 bg-green-50/30 flex flex-col items-center justify-center gap-1 shadow-sm hover:shadow-md transition-all">
+                    <div className="text-green-600/70 text-xs font-bold uppercase tracking-wider">Present</div>
+                    <div className="text-2xl font-black text-green-600">{statistics.present}</div>
+                    <Check size={16} className="text-green-500 mt-1" strokeWidth={3} />
+                </div>
+
+                <div className="glass p-4 rounded-2xl border border-red-100 bg-red-50/30 flex flex-col items-center justify-center gap-1 shadow-sm hover:shadow-md transition-all">
+                    <div className="text-red-600/70 text-xs font-bold uppercase tracking-wider">Absent</div>
+                    <div className="text-2xl font-black text-red-600">{statistics.absent}</div>
+                    <X size={16} className="text-red-500 mt-1" strokeWidth={3} />
+                </div>
+
+                <div className="glass p-4 rounded-2xl border border-yellow-100 bg-yellow-50/30 flex flex-col items-center justify-center gap-1 shadow-sm hover:shadow-md transition-all">
+                    <div className="text-yellow-600/70 text-xs font-bold uppercase tracking-wider">Late</div>
+                    <div className="text-2xl font-black text-yellow-600">{statistics.late}</div>
+                    <Clock size={16} className="text-yellow-500 mt-1" strokeWidth={3} />
+                </div>
+
+                <div className="glass p-4 rounded-2xl border border-blue-100 bg-blue-50/30 flex flex-col items-center justify-center gap-1 shadow-sm hover:shadow-md transition-all">
+                    <div className="text-blue-600/70 text-xs font-bold uppercase tracking-wider">Leave</div>
+                    <div className="text-2xl font-black text-blue-600">{statistics.onLeave}</div>
+                    <AlertCircle size={16} className="text-blue-500 mt-1" strokeWidth={3} />
+                </div>
+
+                <div className="glass p-4 rounded-2xl border border-slate-200/60 flex flex-col items-center justify-center gap-1 shadow-sm hover:shadow-md transition-all">
+                    <div className="text-slate-400 text-xs font-bold uppercase tracking-wider">Rate</div>
+                    <div className="text-2xl font-black text-slate-700">{statistics.presentPercent}%</div>
+                    <TrendingUp size={16} className="text-green-500 mt-1" />
+                </div>
+            </div>
+
+            {/* Records List */}
+            <div className="glass rounded-3xl overflow-hidden shadow-lg border border-slate-200">
+                <div className="p-6 border-b border-slate-200 bg-slate-50/50 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white rounded-lg shadow-sm border border-slate-100">
+                            <Calendar size={20} className="text-blue-500" />
+                        </div>
+                        <div>
+                            <h3 className="text-slate-800 font-bold text-lg">Attendance Records</h3>
+                            <p className="text-slate-500 text-xs font-medium">Showing {sortedRecords.length} entries</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="max-h-[500px] overflow-y-auto custom-scrollbar">
+                    <div className="divide-y divide-slate-100">
+                        {sortedRecords.map((record) => (
+                            <div key={record.id} className="p-4 flex items-center gap-4 hover:bg-slate-50/80 transition-all group">
+                                <div className="flex flex-col items-center justify-center w-14 h-14 bg-white rounded-2xl border border-slate-100 shadow-sm shrink-0">
+                                    <span className="text-xs font-bold text-slate-400 uppercase">{new Date(record.date).toLocaleDateString('en-US', { month: 'short' })}</span>
+                                    <span className="text-xl font-black text-slate-700">{new Date(record.date).getDate()}</span>
+                                </div>
+
+                                <div className="flex-1 min-w-0">
+                                    <h4 className="text-slate-800 font-bold text-base truncate">{getStudentName(record.studentId)}</h4>
+                                    <div className="flex items-center gap-2 mt-1">
+                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-500 border border-slate-200 uppercase tracking-wide">
+                                            {record.batchId}
+                                        </span>
+                                        <span className="text-xs text-slate-400 hidden sm:inline-block">
+                                            • {new Date(record.date).toLocaleDateString('en-US', { weekday: 'long' })}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="shrink-0">
+                                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold border shadow-sm ${getStatusStyle(record.status)}`}>
+                                        {getStatusIcon(record.status)}
+                                        <span className="hidden sm:inline">{record.status}</span>
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                        {sortedRecords.length === 0 && (
+                            <div className="p-12 text-center flex flex-col items-center justify-center gap-3">
+                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
+                                    <Search size={24} />
+                                </div>
+                                <p className="text-slate-500 font-medium">No records found for the selected criteria</p>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

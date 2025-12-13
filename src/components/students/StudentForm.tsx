@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useForm } from "react-hook-form";
 import { Student } from "@/lib/db";
 import { X, ChevronDown } from "lucide-react";
+import { getLocalDateString } from "@/lib/utils";
 
 const generateId = () => `STU-${Math.floor(Math.random() * 10000)}`;
 
@@ -23,7 +24,7 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
 
             ...initialData,
             dateOfBirth: initialData?.dateOfBirth ? new Date(initialData.dateOfBirth).toISOString().split('T')[0] as unknown as Date : undefined,
-            enrollmentDate: initialData?.enrollmentDate ? new Date(initialData.enrollmentDate).toISOString().split('T')[0] as unknown as Date : new Date().toISOString().split('T')[0] as unknown as Date,
+            enrollmentDate: initialData?.enrollmentDate ? new Date(initialData.enrollmentDate).toISOString().split('T')[0] as unknown as Date : getLocalDateString() as unknown as Date,
         },
     });
 

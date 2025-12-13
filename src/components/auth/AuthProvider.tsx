@@ -1,12 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import LoginScreen from "./LoginScreen";
+import { supabase } from "@/lib/supabase";
+import { User } from "@supabase/supabase-js";
+import SupabaseLogin from "./SupabaseLogin";
+import { Loader2 } from "lucide-react";
 
 interface AuthContextType {
+    user: User | null;
     isAuthenticated: boolean;
-    login: (username: string, password: string) => boolean;
-    logout: () => void;
+    logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,46 +27,46 @@ interface AuthProviderProps {
 }
 
 export default function AuthProvider({ children }: AuthProviderProps) {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
+    const [user, setUser] = useState<User | null>(null);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const authStatus = localStorage.getItem("nexus-auth");
-        if (authStatus === "authenticated") {
-            // eslint-disable-next-line react-hooks/set-state-in-effect
-            setIsAuthenticated(true);
-        }
-        setIsLoading(false);
+        // Check active sessions and sets the user
+        const checkSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            setUser(session?.user ?? null);
+            setLoading(false);
+        };
+
+        checkSession();
+
+        // Listen for changes on auth state (logged in, signed out, etc.)
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+            setUser(session?.user ?? null);
+            setLoading(false);
+        });
+
+        return () => subscription.unsubscribe();
     }, []);
 
-    const login = (username: string, password: string): boolean => {
-        if (username === "coach" && password === "12345") {
-            setIsAuthenticated(true);
-            localStorage.setItem("nexus-auth", "authenticated");
-            return true;
-        }
-        return false;
+    const logout = async () => {
+        await supabase.auth.signOut();
     };
 
-    const logout = () => {
-        setIsAuthenticated(false);
-        localStorage.removeItem("nexus-auth");
-    };
-
-    if (isLoading) {
+    if (loading) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
-                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <Loader2 size={40} className="text-blue-600 animate-spin" />
             </div>
         );
     }
 
-    if (!isAuthenticated) {
-        return <LoginScreen onLogin={login} />;
+    if (!user) {
+        return <SupabaseLogin />;
     }
 
     return (
-        <AuthContext.Provider value={{ isAuthenticated, login, logout }}>
+        <AuthContext.Provider value={{ user, isAuthenticated: !!user, logout }}>
             {children}
         </AuthContext.Provider>
     );
