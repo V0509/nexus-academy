@@ -118,14 +118,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <RefreshCw size={20} className={`text-slate-600 group-hover:text-blue-600 transition-colors ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
                     </button>
                     <button
-                        onClick={() => setResetConfirmOpen(true)}
-                        className="p-2 hover:bg-red-100 rounded-xl transition-all duration-200 active:scale-95 group"
-                        aria-label="Reset Data"
-                        title="Reset Data"
-                    >
-                        <Trash2 size={20} className="text-slate-600 group-hover:text-red-600 transition-colors" />
-                    </button>
-                    <button
                         onClick={logout}
                         className="p-2 hover:bg-red-100 rounded-xl transition-all duration-200 active:scale-95 group"
                         aria-label="Logout"
@@ -213,7 +205,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
                     <button
                         onClick={() => setResetConfirmOpen(true)}
-                        className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 w-full text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl sm:rounded-2xl transition-all duration-300 group mt-2"
+                        className="hidden lg:flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 w-full text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl sm:rounded-2xl transition-all duration-300 group mt-2"
                     >
                         <Trash2 size={16} className="group-hover:scale-110 transition-transform duration-300" />
                         <span className="font-semibold text-xs sm:text-sm">Reset Data</span>
