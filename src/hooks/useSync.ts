@@ -13,6 +13,51 @@ export function useSync() {
         setIsSyncing(true);
 
         try {
+            // 0. Process Deletions
+            const deletedRecords = await db.deletedRecords.toArray();
+            if (deletedRecords.length > 0) {
+                const studentsToDelete = deletedRecords.filter(r => r.tableName === 'students').map(r => r.itemId);
+                const attendanceToDelete = deletedRecords.filter(r => r.tableName === 'attendance');
+                const performanceToDelete = deletedRecords.filter(r => r.tableName === 'performance');
+
+                if (studentsToDelete.length > 0) {
+                    const { error } = await supabase
+                        .from('students')
+                        .delete()
+                        .in('student_id', studentsToDelete)
+                        .eq('coach_id', user.id);
+                    if (error) throw error;
+                }
+
+                for (const record of attendanceToDelete) {
+                    if (record.date) {
+                        await supabase
+                            .from('attendance')
+                            .delete()
+                            .match({
+                                student_id: record.itemId,
+                                date: record.date.toISOString(),
+                                coach_id: user.id
+                            });
+                    }
+                }
+
+                for (const record of performanceToDelete) {
+                    if (record.date) {
+                        await supabase
+                            .from('performance')
+                            .delete()
+                            .match({
+                                student_id: record.itemId,
+                                assessment_date: record.date.toISOString(),
+                                coach_id: user.id
+                            });
+                    }
+                }
+
+                await db.deletedRecords.clear();
+            }
+
             // 1. Sync Students
             const localStudents = await db.students.toArray();
             if (localStudents.length > 0) {
@@ -70,14 +115,20 @@ export function useSync() {
 
             // 4. Pull from Cloud (Restore/Sync Down)
             // Students
-            const { data: cloudStudents, error: pullError1 } = await supabase.from('students').select('data');
+            const { data: cloudStudents, error: pullError1 } = await supabase
+                .from('students')
+                .select('data')
+                .eq('coach_id', user.id);
             if (pullError1) throw pullError1;
             if (cloudStudents) {
                 await db.students.bulkPut(cloudStudents.map(r => r.data));
             }
 
             // Attendance
-            const { data: cloudAttendance, error: pullError2 } = await supabase.from('attendance').select('data');
+            const { data: cloudAttendance, error: pullError2 } = await supabase
+                .from('attendance')
+                .select('data')
+                .eq('coach_id', user.id);
             if (pullError2) throw pullError2;
             if (cloudAttendance) {
                 // Fix dates (JSON strings -> Date objects)
@@ -89,7 +140,10 @@ export function useSync() {
             }
 
             // Performance
-            const { data: cloudPerformance, error: pullError3 } = await supabase.from('performance').select('data');
+            const { data: cloudPerformance, error: pullError3 } = await supabase
+                .from('performance')
+                .select('data')
+                .eq('coach_id', user.id);
             if (pullError3) throw pullError3;
             if (cloudPerformance) {
                 // Fix dates

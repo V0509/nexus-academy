@@ -55,17 +55,26 @@ export interface PerformanceRecord {
   nextAssessmentDate?: Date;
 }
 
+export interface DeletedRecord {
+  id?: number;
+  tableName: 'students' | 'attendance' | 'performance';
+  itemId: string;
+  date?: Date;
+}
+
 export class BadmintonDatabase extends Dexie {
   students!: Table<Student>;
   attendance!: Table<AttendanceRecord>;
   performance!: Table<PerformanceRecord>;
+  deletedRecords!: Table<DeletedRecord>;
 
   constructor() {
     super('BadmintonAcademyDB');
-    this.version(2).stores({
+    this.version(3).stores({
       students: '++id, studentId, fullName, batch, coachId, membershipStatus',
       attendance: '++id, date, studentId, batchId, coachId, status',
-      performance: '++id, studentId, assessmentDate'
+      performance: '++id, studentId, assessmentDate',
+      deletedRecords: '++id, tableName, itemId'
     });
   }
 }

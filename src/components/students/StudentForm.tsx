@@ -146,15 +146,6 @@ export default function StudentForm({ initialData, onSubmit, onCancel }: Student
                             </div>
 
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Coach Name</label>
-                                <input
-                                    {...register("coachId")}
-                                    className="w-full p-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                    placeholder="Coach Name"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-700">Status</label>
                                 <div className="relative">
                                     <select

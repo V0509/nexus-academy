@@ -3,7 +3,9 @@
 import React, { useState, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/lib/db";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Calendar, TrendingUp, Users, ChevronDown, Check, X, Clock, AlertCircle, Search } from "lucide-react";
+import { NoAttendanceEmpty, NoSearchResultsEmpty } from "../common/EmptyState";
 
 type DatePreset = 'last7' | 'last30' | 'thisMonth' | 'custom';
 
@@ -13,9 +15,17 @@ export default function AttendanceHistory() {
     const [customEndDate, setCustomEndDate] = useState('');
     const [selectedStudent, setSelectedStudent] = useState('All');
     const [selectedBatch, setSelectedBatch] = useState('All');
+    const { user } = useAuth();
 
-    const students = useLiveQuery(() => db.students.toArray());
-    const allRecords = useLiveQuery(() => db.attendance.toArray());
+    const students = useLiveQuery(() => {
+        if (!user) return [];
+        return db.students.where('coachId').equals(user.id).toArray();
+    }, [user]);
+
+    const allRecords = useLiveQuery(() => {
+        if (!user) return [];
+        return db.attendance.where('coachId').equals(user.id).toArray();
+    }, [user]);
 
     const dateRange = useMemo(() => {
         const today = new Date();
@@ -268,11 +278,19 @@ export default function AttendanceHistory() {
                             </div>
                         ))}
                         {sortedRecords.length === 0 && (
-                            <div className="p-12 text-center flex flex-col items-center justify-center gap-3">
-                                <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center text-slate-300">
-                                    <Search size={24} />
-                                </div>
-                                <p className="text-slate-500 font-medium">No records found for the selected criteria</p>
+                            <div className="p-6">
+                                {allRecords && allRecords.length === 0 ? (
+                                    <NoAttendanceEmpty />
+                                ) : (
+                                    <NoSearchResultsEmpty
+                                        query="selected criteria"
+                                        onClear={() => {
+                                            setDatePreset('last30');
+                                            setSelectedStudent('All');
+                                            setSelectedBatch('All');
+                                        }}
+                                    />
+                                )}
                             </div>
                         )}
                     </div>

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { supabase } from "@/lib/supabase";
+import { db } from "@/lib/db";
 import { User } from "@supabase/supabase-js";
 import SupabaseLogin from "./SupabaseLogin";
 import { Loader2 } from "lucide-react";
@@ -51,6 +52,9 @@ export default function AuthProvider({ children }: AuthProviderProps) {
 
     const logout = async () => {
         await supabase.auth.signOut();
+        await db.students.clear();
+        await db.attendance.clear();
+        await db.performance.clear();
     };
 
     if (loading) {

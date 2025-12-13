@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, PerformanceRecord } from "@/lib/db";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Edit, Trash2, Award, Calendar, ChevronDown, ChevronUp, Target, Heart, Brain, Trophy, ArrowUp, ArrowDown, Search, Filter, X, Info } from "lucide-react";
 import ConfirmDialog from "@/components/common/ConfirmDialog";
 import { useToast } from "@/components/common/Toast";
@@ -33,8 +34,13 @@ export default function PerformanceList({ onEdit, onAddNew }: PerformanceListPro
     const [isDeleting, setIsDeleting] = useState(false);
 
     const { showToast } = useToast();
+    const { user } = useAuth();
 
-    const students = useLiveQuery(() => db.students.toArray());
+    const students = useLiveQuery(() => {
+        if (!user) return [];
+        return db.students.where('coachId').equals(user.id).toArray();
+    }, [user]);
+
     const allRecords = useLiveQuery(() => db.performance.toArray());
 
     // Loading state
@@ -193,6 +199,16 @@ export default function PerformanceList({ onEdit, onAddNew }: PerformanceListPro
 
         setIsDeleting(true);
         try {
+            // Track deletion for sync
+            const record = await db.performance.get(deleteConfirm.recordId);
+            if (record) {
+                await db.deletedRecords.add({
+                    tableName: 'performance',
+                    itemId: record.studentId,
+                    date: record.assessmentDate
+                });
+            }
+
             await db.performance.delete(deleteConfirm.recordId);
             showToast({
                 type: 'success',

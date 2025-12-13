@@ -5,6 +5,7 @@ import { useLiveQuery } from "dexie-react-hooks";
 import { db, Student } from "@/lib/db";
 import { Check, X, Clock, AlertCircle, Calendar, Users, Search, Filter } from "lucide-react";
 import { getLocalDateString } from "@/lib/utils";
+import { NoStudentsEmpty, NoSearchResultsEmpty } from "../common/EmptyState";
 
 export default function AttendanceMarker() {
     const [selectedDate, setSelectedDate] = useState(getLocalDateString());
@@ -216,14 +217,18 @@ export default function AttendanceMarker() {
             </div>
 
             {filteredStudents?.length === 0 && (
-                <div className="glass p-12 rounded-3xl text-center flex flex-col items-center justify-center gap-4">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-300">
-                        <Search size={32} />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-bold text-slate-700">No students found</h3>
-                        <p className="text-slate-500">Try adjusting your search or filters</p>
-                    </div>
+                <div className="mt-6">
+                    {students && students.length === 0 ? (
+                        <NoStudentsEmpty onAddStudent={() => { window.location.href = '/students?action=add' }} />
+                    ) : (
+                        <NoSearchResultsEmpty
+                            query={searchQuery || selectedBatch}
+                            onClear={() => {
+                                setSearchQuery('');
+                                setSelectedBatch('All');
+                            }}
+                        />
+                    )}
                 </div>
             )}
         </div>

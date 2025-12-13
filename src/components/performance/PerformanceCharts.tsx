@@ -23,6 +23,7 @@ import {
     Area,
 } from "recharts";
 import { TrendingUp, Calendar, Target, Zap, ArrowUp, ArrowDown, Activity, Users, Trophy, Flame, Star, ChevronDown, User } from "lucide-react";
+import { NoStudentDataEmpty, NoStudentsEmpty } from "../common/EmptyState";
 
 // Skill Heat Map Component
 const SkillHeatMap = ({ record, previousRecord }: { record: PerformanceRecord; previousRecord?: PerformanceRecord }) => {
@@ -400,7 +401,7 @@ export default function PerformanceCharts() {
                 </div>
             </div>
 
-            {!selectedStudent && (
+            {!selectedStudent && students && students.length > 0 && (
                 <div className="glass p-8 sm:p-12 md:p-16 rounded-2xl sm:rounded-3xl text-center fade-in">
                     <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-slate-100 to-slate-200 rounded-3xl flex items-center justify-center">
                         <TrendingUp size={40} className="text-slate-400" />
@@ -409,13 +410,15 @@ export default function PerformanceCharts() {
                 </div>
             )}
 
+            {!selectedStudent && students && students.length === 0 && (
+                <div className="mt-8">
+                    <NoStudentsEmpty onAddStudent={() => { window.location.href = '/students?action=add' }} />
+                </div>
+            )}
+
             {selectedStudent && studentRecords.length === 0 && (
-                <div className="glass p-8 sm:p-12 md:p-16 rounded-2xl sm:rounded-3xl text-center fade-in">
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-slate-100 to-slate-200 rounded-3xl flex items-center justify-center">
-                        <Calendar size={40} className="text-slate-400" />
-                    </div>
-                    <p className="text-sm sm:text-base text-slate-600 font-medium">No performance assessments found for this student</p>
-                    <p className="text-xs sm:text-sm text-slate-500 mt-2">Add an assessment to start tracking their progress</p>
+                <div className="mt-8">
+                    <NoStudentDataEmpty studentName={students?.find(s => s.studentId === selectedStudent)?.fullName || 'Student'} />
                 </div>
             )}
 

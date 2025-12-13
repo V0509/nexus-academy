@@ -5,15 +5,23 @@ import Image from "next/image";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, Student } from "@/lib/db";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { Search, Edit, Trash2, User, Plus } from "lucide-react";
 import StudentForm from "./StudentForm";
+import ConfirmDialog from "../common/ConfirmDialog";
+import { NoStudentsEmpty, NoSearchResultsEmpty } from "../common/EmptyState";
 
 export default function StudentList() {
     const searchParams = useSearchParams();
     const router = useRouter();
+    const { user } = useAuth();
     const [searchQuery, setSearchQuery] = useState("");
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
+    const [deleteConfirmation, setDeleteConfirmation] = useState<{ isOpen: boolean; studentId: number | null }>({
+        isOpen: false,
+        studentId: null
+    });
 
     // Check for action query parameter to auto-open form
     useEffect(() => {
@@ -24,24 +32,59 @@ export default function StudentList() {
         }
     }, [searchParams, router]);
 
+    // Cleanup orphaned records (self-healing)
+    useEffect(() => {
+        const cleanupOrphans = async () => {
+            try {
+                const allStudents = await db.students.toArray();
+                const studentIds = new Set(allStudents.map(s => s.studentId));
+
+                // Cleanup Attendance
+                const attendance = await db.attendance.toArray();
+                const orphanedAttendance = attendance.filter(r => !studentIds.has(r.studentId));
+                if (orphanedAttendance.length > 0) {
+                    await db.attendance.bulkDelete(orphanedAttendance.map(r => r.id!));
+                    console.log(`Cleaned up ${orphanedAttendance.length} orphaned attendance records`);
+                }
+
+                // Cleanup Performance
+                const performance = await db.performance.toArray();
+                const orphanedPerformance = performance.filter(r => !studentIds.has(r.studentId));
+                if (orphanedPerformance.length > 0) {
+                    await db.performance.bulkDelete(orphanedPerformance.map(r => r.id!));
+                    console.log(`Cleaned up ${orphanedPerformance.length} orphaned performance records`);
+                }
+            } catch (error) {
+                console.error("Error cleaning up orphaned records:", error);
+            }
+        };
+
+        cleanupOrphans();
+    }, []);
+
     const students = useLiveQuery(
         () => {
+            if (!user) return [];
+
+            let collection = db.students.where('coachId').equals(user.id);
+
             if (searchQuery) {
-                return db.students
+                return collection
                     .filter((student) =>
                         student.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
                         student.studentId.toLowerCase().includes(searchQuery.toLowerCase())
                     )
                     .toArray();
             }
-            return db.students.toArray();
+            return collection.toArray();
         },
-        [searchQuery]
+        [searchQuery, user]
     );
 
     const handleAddStudent = async (data: Omit<Student, "id">) => {
+        if (!user) return;
         try {
-            await db.students.add(data as Student);
+            await db.students.add({ ...data, coachId: user.id } as Student);
             setIsFormOpen(false);
         } catch {
             alert("Failed to add student. Please try again.");
@@ -59,19 +102,49 @@ export default function StudentList() {
         }
     };
 
-    const handleDeleteStudent = async (id: number) => {
-        if (confirm("Are you sure you want to delete this student? This will also delete all their attendance and performance records.")) {
-            try {
-                const studentToDelete = students?.find(s => s.id === id);
-                if (studentToDelete) {
-                    // Delete associated records
-                    await db.attendance.where('studentId').equals(studentToDelete.studentId).delete();
-                    await db.performance.where('studentId').equals(studentToDelete.studentId).delete();
-                }
-                await db.students.delete(id);
-            } catch {
-                alert("Failed to delete student. Please try again.");
+    const handleDeleteClick = (id: number) => {
+        setDeleteConfirmation({ isOpen: true, studentId: id });
+    };
+
+    const confirmDelete = async () => {
+        if (!deleteConfirmation.studentId) return;
+
+        const id = deleteConfirmation.studentId;
+        try {
+            // Fetch student directly from DB to ensure we have the data for cascading delete
+            const studentToDelete = await db.students.get(id);
+
+            if (studentToDelete) {
+                // Track deletions for Sync
+                await db.deletedRecords.add({
+                    tableName: 'students',
+                    itemId: studentToDelete.studentId
+                });
+
+                // Find related records to track their deletion too
+                const attendanceRecords = await db.attendance.where('studentId').equals(studentToDelete.studentId).toArray();
+                const performanceRecords = await db.performance.where('studentId').equals(studentToDelete.studentId).toArray();
+
+                await db.deletedRecords.bulkAdd(attendanceRecords.map(r => ({
+                    tableName: 'attendance',
+                    itemId: r.studentId,
+                    date: r.date
+                })));
+
+                await db.deletedRecords.bulkAdd(performanceRecords.map(r => ({
+                    tableName: 'performance',
+                    itemId: r.studentId,
+                    date: r.assessmentDate
+                })));
+
+                // Delete associated records
+                await db.attendance.where('studentId').equals(studentToDelete.studentId).delete();
+                await db.performance.where('studentId').equals(studentToDelete.studentId).delete();
             }
+            await db.students.delete(id);
+            setDeleteConfirmation({ isOpen: false, studentId: null });
+        } catch {
+            alert("Failed to delete student. Please try again.");
         }
     };
 
@@ -150,10 +223,6 @@ export default function StudentList() {
                                 <span className="text-slate-400 text-xs sm:text-sm">Level</span>
                                 <span className="font-medium text-xs sm:text-sm">{student.skillLevel}</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-400 text-xs sm:text-sm">Coach</span>
-                                <span className="font-medium text-xs sm:text-sm">{student.coachId || '-'}</span>
-                            </div>
                         </div>
 
                         <div className="flex gap-2 pt-3 sm:pt-4 border-t border-slate-100">
@@ -165,7 +234,7 @@ export default function StudentList() {
                                 Edit
                             </button>
                             <button
-                                onClick={() => student.id && handleDeleteStudent(student.id)}
+                                onClick={() => student.id && handleDeleteClick(student.id)}
                                 className="p-2.5 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all"
                             >
                                 <Trash2 size={16} />
@@ -174,16 +243,29 @@ export default function StudentList() {
                     </div>
                 ))}
 
-                {students?.length === 0 && (
-                    <div className="col-span-full py-12 text-center glass rounded-2xl border border-dashed border-slate-200">
-                        <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-slate-100 to-slate-200 rounded-2xl flex items-center justify-center">
-                            <User size={32} className="text-slate-400" />
-                        </div>
-                        <p className="text-slate-500 font-medium">No students found</p>
-                        <p className="text-slate-400 text-sm mt-1">Add your first student to get started</p>
+                {students?.length === 0 && searchQuery && (
+                    <div className="col-span-full">
+                        <NoSearchResultsEmpty query={searchQuery} onClear={() => setSearchQuery('')} />
+                    </div>
+                )}
+
+                {students?.length === 0 && !searchQuery && (
+                    <div className="col-span-full">
+                        <NoStudentsEmpty onAddStudent={openAddForm} />
                     </div>
                 )}
             </div>
+
+            <ConfirmDialog
+                isOpen={deleteConfirmation.isOpen}
+                title="Delete Student"
+                message="Are you sure you want to delete this student? This action cannot be undone and will permanently delete all related attendance and performance records."
+                confirmLabel="Delete Student"
+                cancelLabel="Cancel"
+                variant="danger"
+                onConfirm={confirmDelete}
+                onCancel={() => setDeleteConfirmation({ isOpen: false, studentId: null })}
+            />
         </div>
     );
 }

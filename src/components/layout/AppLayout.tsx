@@ -12,13 +12,17 @@ import {
     X,
     LogOut,
     Cloud,
-    RefreshCw
+    RefreshCw,
+    Trash2
 } from "lucide-react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useSync } from "@/hooks/useSync";
 import { useToast } from "@/components/common/Toast";
+import ConfirmDialog from "@/components/common/ConfirmDialog";
+import { db } from "@/lib/db";
+import { supabase } from "@/lib/supabase";
 
 function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -43,6 +47,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const { logout } = useAuth();
     const { isSyncing, syncData } = useSync();
     const { showToast } = useToast();
+    const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
+
+    // Sync data on initial load (login)
+    React.useEffect(() => {
+        syncData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleSync = async () => {
         const result = await syncData();
@@ -50,6 +61,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             showToast({ title: "Success", message: "Data synced to cloud successfully!", type: 'success' });
         } else {
             showToast({ title: "Error", message: "Sync failed. Please try again.", type: 'error' });
+        }
+    };
+
+    const handleResetData = async () => {
+        try {
+            // 1. Clear Cloud Data (if logged in)
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session?.user) {
+                // Delete in reverse order of dependencies to avoid foreign key constraints
+                const { error: perfError } = await supabase.from('performance').delete().eq('coach_id', session.user.id);
+                if (perfError) console.error("Error deleting performance:", perfError);
+
+                const { error: attError } = await supabase.from('attendance').delete().eq('coach_id', session.user.id);
+                if (attError) console.error("Error deleting attendance:", attError);
+
+                const { error: stuError } = await supabase.from('students').delete().eq('coach_id', session.user.id);
+                if (stuError) console.error("Error deleting students:", stuError);
+            }
+
+            // 2. Clear Local Data
+            await db.delete();
+            await db.open();
+
+            showToast({ title: "Success", message: "All data has been cleared.", type: 'success' });
+            setResetConfirmOpen(false);
+
+            // Force reload to clear any in-memory state
+            window.location.reload();
+        } catch (error) {
+            console.error("Failed to reset data:", error);
+            showToast({ title: "Error", message: "Failed to clear data.", type: 'error' });
         }
     };
 
@@ -74,6 +116,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         title="Sync to Cloud"
                     >
                         <RefreshCw size={20} className={`text-slate-600 group-hover:text-blue-600 transition-colors ${isSyncing ? 'animate-spin text-blue-600' : ''}`} />
+                    </button>
+                    <button
+                        onClick={() => setResetConfirmOpen(true)}
+                        className="p-2 hover:bg-red-100 rounded-xl transition-all duration-200 active:scale-95 group"
+                        aria-label="Reset Data"
+                        title="Reset Data"
+                    >
+                        <Trash2 size={20} className="text-slate-600 group-hover:text-red-600 transition-colors" />
                     </button>
                     <button
                         onClick={logout}
@@ -160,6 +210,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                         <LogOut size={20} className="group-hover:scale-110 transition-transform duration-300" />
                         <span className="font-semibold text-sm sm:text-base">Logout</span>
                     </button>
+
+                    <button
+                        onClick={() => setResetConfirmOpen(true)}
+                        className="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 w-full text-white/40 hover:text-red-400 hover:bg-red-500/10 rounded-xl sm:rounded-2xl transition-all duration-300 group mt-2"
+                    >
+                        <Trash2 size={16} className="group-hover:scale-110 transition-transform duration-300" />
+                        <span className="font-semibold text-xs sm:text-sm">Reset Data</span>
+                    </button>
                 </div>
             </aside>
 
@@ -210,6 +268,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     })}
                 </div>
             </nav>
+
+            <ConfirmDialog
+                isOpen={resetConfirmOpen}
+                title="Reset All Data"
+                message="Are you sure you want to delete ALL data? This includes all students, attendance records, and performance evaluations. This action cannot be undone."
+                confirmLabel="Reset Everything"
+                cancelLabel="Cancel"
+                variant="danger"
+                onConfirm={handleResetData}
+                onCancel={() => setResetConfirmOpen(false)}
+            />
         </div>
     );
 }

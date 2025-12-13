@@ -1,16 +1,24 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Loader2, Mail, Lock, AlertCircle } from "lucide-react";
 
 export default function SupabaseLogin() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [rememberMe, setRememberMe] = useState(true);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [mode, setMode] = useState<'login' | 'signup'>('login');
     const [message, setMessage] = useState<string | null>(null);
+
+    useEffect(() => {
+        const savedEmail = localStorage.getItem('nexus_saved_email');
+        if (savedEmail) {
+            setEmail(savedEmail);
+        }
+    }, []);
 
     const handleAuth = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -27,6 +35,13 @@ export default function SupabaseLogin() {
                 if (error) throw error;
                 setMessage("Check your email for the confirmation link!");
             } else {
+                // Handle email persistence
+                if (rememberMe) {
+                    localStorage.setItem('nexus_saved_email', email);
+                } else {
+                    localStorage.removeItem('nexus_saved_email');
+                }
+
                 const { error } = await supabase.auth.signInWithPassword({
                     email,
                     password,
@@ -95,6 +110,38 @@ export default function SupabaseLogin() {
                             />
                         </div>
                     </div>
+
+                    {mode === 'login' && (
+                        <div className="flex items-center justify-between pt-2">
+                            <label className="flex items-center gap-2 cursor-pointer group">
+                                <div className="relative flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        checked={rememberMe}
+                                        onChange={(e) => setRememberMe(e.target.checked)}
+                                        className="peer h-4 w-4 cursor-pointer appearance-none rounded border border-slate-300 shadow-sm transition-all checked:border-blue-500 checked:bg-blue-500 hover:border-blue-400"
+                                    />
+                                    <svg
+                                        className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white opacity-0 peer-checked:opacity-100 transition-opacity"
+                                        width="10"
+                                        height="8"
+                                        viewBox="0 0 10 8"
+                                        fill="none"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                        <path
+                                            d="M1 4L3.5 6.5L9 1"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        />
+                                    </svg>
+                                </div>
+                                <span className="text-sm text-slate-600 font-medium group-hover:text-slate-800 transition-colors">Remember me</span>
+                            </label>
+                        </div>
+                    )}
 
                     <button
                         type="submit"
